@@ -1,8 +1,8 @@
 import pygame, time
 from sys import exit
 
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
+SCREEN_WIDTH = 640
+SCREEN_HEIGHT = 640
 
 pygame.init
 
@@ -20,25 +20,18 @@ class Player(pygame.sprite.Sprite):
         self.horizontal_steps = 2
         self.speed = 200
         self.gravity = 0
-        self.jump_distance = self.texture.get_height() * 2
         self.image = self.texture
-        self.rect = self.image.get_rect(topleft = (20 + self.texture.get_width(), self.limit_y))
-        self.pos = pygame.math.Vector2(self.rect.topleft)
+        self.rect = self.image.get_rect(center = (20 + self.texture.get_width(), self.limit_y))
+        self.pos = pygame.math.Vector2(self.rect.center)
 
     def apply_gravity(self, dt):
         self.gravity += 1
         self.pos.y += (self.gravity * self.speed * dt)
         self.rect.y = round(self.pos.y)
 
-        if self.gravity == 0:
-            display_text(f'Current position: {self.pos.y}', 'White', 10, 40)
-
         if self.rect.y >= self.limit_y:
             self.pos.y = self.limit_y
             self.rect.y = self.limit_y
-
-        display_text(f'Current gravity: {self.gravity}', 'White', 10, 20)
-        display_text(f'Pos Y: {self.pos.y}', 'White', 10, 30)
 
     def player_input(self, dt):
         key = pygame.key.get_pressed()
@@ -49,16 +42,18 @@ class Player(pygame.sprite.Sprite):
         elif key[pygame.K_LEFT]:
             self.pos.x -= (self.horizontal_steps * self.speed * dt)
             self.rect.x = round(self.pos.x)
-            display_text('Moving left', 'White', 10, 10)
+
             if self.pos.x <= 0:
                 self.pos.x = 0
+                self.rect.x = 0
 
         elif key[pygame.K_RIGHT]:
             self.pos.x += (self.horizontal_steps * self.speed * dt)
             self.rect.x = round(self.pos.x)
-            display_text('Moving right', 'White', 10, 10)
+
             if self.pos.x >= self.limit_x:
                 self.pos.x = self.limit_x
+                self.rect.x = self.limit_x
                     
     def update(self, dt):
         self.player_input(dt)

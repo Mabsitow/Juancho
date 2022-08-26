@@ -20,8 +20,7 @@ class Player(pygame.sprite.Sprite):
         self.horizontal_steps = 2
         self.speed = 200
         self.gravity = 0
-        self.image = self.texture
-        self.rect = self.image.get_rect(center = (20 + self.texture.get_width(), self.limit_y))
+        self.rect = self.texture.get_rect(center = (20 + self.texture.get_width(), self.limit_y))
         self.pos = pygame.math.Vector2(self.rect.center)
 
     def apply_gravity(self, dt):

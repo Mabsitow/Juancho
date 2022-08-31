@@ -4,16 +4,75 @@ from settings import *
 class Player(pygame.sprite.Sprite):
     def __init__(self, position, groups, transferable_sprites, obstacle_sprites):
         super().__init__(groups)
-        self.image = pygame.image.load('assets/textures/player/1.png').convert_alpha()
+        self.image = pygame.image.load('assets/textures/player/right/0.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = position)
         self.old_rect = self.rect.copy()
         self.jump_available = True
         self.pos = pygame.math.Vector2(self.rect.topleft)
         self.direction = pygame.math.Vector2()
-        self.speed = 600
+        self.speed = 300
         self.gravity = 0
         self.transferable_sprites = transferable_sprites
         self.obstacle_sprites = obstacle_sprites
+        self.attacking = False
+        self.attack_cd = 100
+        self.attack_time = 0
+        self.idling = False
+        self.idle_time = 0
+        self.idle_limit = 60000
+        self.status = 'static_right'
+        self.last_pressed = None
+        self.collided = False
+        self.frame_index = 0
+        self.animation_speed = 0.15
+        self.import_player_assets()
+
+    def import_player_assets(self):
+        character_path = 'assets/textures/player/'
+        # Missing animations:
+        # Push left / right
+        # Attack left / right
+        # Big attack left / right
+        # Death left / right
+        self.animations = {'static_left': [], 'static_right': [], 'left': [], 'right': [], 'jump_left': [], 'jump_right': [], 'idle_left': [], 'idle_right': [],
+        'jump_hit_left': [], 'jump_hit_right': []}
+
+        for animation in self.animations.keys():
+            full_path = character_path + animation
+            self.animations[animation] = import_folder(full_path)
+
+    def get_status(self):
+        if self.last_pressed == 'right':
+            if self.jump_available == False:
+                if self.collided == True:
+                    self.status = 'jump_hit_right'
+                else:    
+                    self.status = 'jump_right'
+            else:
+                if round(self.direction.x) > 0:
+                    self.status = 'right'
+                elif round(self.direction.x) == 0:
+                    self.status = 'static_right'
+
+        elif self.last_pressed == 'left':
+            if self.jump_available == False:
+                if self.collided == True:
+                    self.status = 'jump_hit_left'
+                else:
+                    self.status = 'jump_left'
+            else:
+                if round(self.direction.x) < 0:
+                    self.status = 'left'
+                elif round(self.direction.x) == 0:
+                    self.status = 'static_left'
+
+        if self.idling == True:
+            if self.status == 'static_right':
+                self.status = 'idle_right'
+            elif self.status == 'static_left':
+                self.status = 'idle_left'
+
+        print(self.last_pressed)
 
     def input(self):
         key = pygame.key.get_pressed()
@@ -21,13 +80,41 @@ class Player(pygame.sprite.Sprite):
         if key[pygame.K_UP] and self.jump_available == True:
             self.jump_available = False
             self.gravity = -96
+            self.idling = False
+            self.idle_time = 0
 
         if key[pygame.K_RIGHT]:
             self.direction.x = 1
+            self.idling = False
+            self.idle_time = 0
+            self.last_pressed = 'right'
         elif key[pygame.K_LEFT]:
             self.direction.x = -1
+            self.idling = False
+            self.idle_time = 0
+            self.last_pressed = 'left'
         else:
             self.direction.x = 0
+
+        if key[pygame.K_a] and not self.attacking:
+            self.attacking = True
+            self.attack_time = pygame.time.get_ticks()
+            self.idling = False
+            self.idle_time = 0
+
+    def cooldowns(self):
+        current_time = pygame.time.get_ticks()
+        attack_elapsed_time = current_time - self.attack_time
+
+        if 'static' in self.status:
+            self.idle_time += 1
+
+        if self.attacking:
+            if attack_elapsed_time >= self.attack_cd:
+                self.attacking = False
+
+        if self.idle_time > self.idle_limit:
+            self.idling = True
 
     def move(self, speed, dt):
         if self.direction.magnitude_squared() != 0:
@@ -69,13 +156,29 @@ class Player(pygame.sprite.Sprite):
                         self.pos.y = self.rect.y
                         self.gravity = 0
                         self.jump_available = True
+                        self.collided = False
 
                     # Collision on the top
                     if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
                         self.rect.top = sprite.rect.bottom
                         self.pos.y = self.rect.y
+                        self.collided = True
 
         if transferable_sprites:
+            if direction == 'vertical':
+                for sprite in transferable_sprites:
+                    # Collision on the bottom
+                    if self.rect.bottom >= sprite.rect.top and self.old_rect.bottom <= sprite.old_rect.top:
+                        self.rect.bottom = sprite.rect.top
+                        self.pos.y = self.rect.y
+                        self.gravity = 0
+                        self.jump_available = True
+
+                    # Collision on the top
+                    if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
+                        if self.direction.y > sprite.rect.top:
+                            self.rect.bottom = sprite.rect.top
+                            self.pos.y = self.rect.y
             # Left this here if I need it in the near future, for now I don't
             # if direction == 'horizontal':
             #     for sprite in transferable_sprites:
@@ -91,22 +194,21 @@ class Player(pygame.sprite.Sprite):
             #                 self.rect.left = sprite.rect.right
             #                 self.pos.x = self.rect.x
 
-            if direction == 'vertical':
-                for sprite in transferable_sprites:
-                    # Collision on the bottom
-                    if self.rect.bottom >= sprite.rect.top and self.old_rect.bottom <= sprite.old_rect.top:
-                        self.rect.bottom = sprite.rect.top
-                        self.pos.y = self.rect.y
-                        self.gravity = 0
-                        self.jump_available = True
+    def animate(self):
+        animation = self.animations[self.status]
 
-                    # Collision on the top
-                    if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
-                        if self.direction.y > sprite.rect.top:
-                            self.rect.bottom = sprite.rect.top
-                            self.pos.y = self.rect.y
+        self.frame_index += self.animation_speed
+
+        if self.frame_index >= len(animation):
+            self.frame_index = 0
+
+        self.image = animation[int(self.frame_index)]
+        self.rect = self.image.get_rect(topleft = self.rect.topleft)
 
     def update(self, dt):
         self.old_rect = self.rect.copy()
         self.input()
+        self.cooldowns()
+        self.get_status()
+        self.animate()
         self.move(self.speed, dt)

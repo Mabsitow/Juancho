@@ -4,6 +4,7 @@ from settings import *
 class Player(pygame.sprite.Sprite):
     def __init__(self, position, groups, transferable_sprites, obstacle_sprites):
         super().__init__(groups)
+        self.surface_list = []
         self.image = pygame.image.load('assets/textures/player/right/0.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = position)
         self.old_rect = self.rect.copy()
@@ -21,7 +22,7 @@ class Player(pygame.sprite.Sprite):
         self.idle_time = 0
         self.idle_limit = 60000
         self.status = 'static_right'
-        self.last_pressed = None
+        self.last_pressed = ''
         self.collided = False
         self.frame_index = 0
         self.animation_speed = 0.15
@@ -71,8 +72,6 @@ class Player(pygame.sprite.Sprite):
                 self.status = 'idle_right'
             elif self.status == 'static_left':
                 self.status = 'idle_left'
-
-        print(self.last_pressed)
 
     def input(self):
         key = pygame.key.get_pressed()
@@ -173,12 +172,14 @@ class Player(pygame.sprite.Sprite):
                         self.pos.y = self.rect.y
                         self.gravity = 0
                         self.jump_available = True
+                        self.collided = False
 
                     # Collision on the top
                     if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
                         if self.direction.y > sprite.rect.top:
                             self.rect.bottom = sprite.rect.top
                             self.pos.y = self.rect.y
+                            self.collided = False
             # Left this here if I need it in the near future, for now I don't
             # if direction == 'horizontal':
             #     for sprite in transferable_sprites:

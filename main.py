@@ -32,6 +32,7 @@ class Game:
         while True:
             dt = time.time() - previous_time
             previous_time = time.time()
+            
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()

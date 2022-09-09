@@ -26,7 +26,7 @@ class Level:
                 if col == 'P':
                     self.player = Player((x, y), [self.visible_sprites], self.transferable_sprites, self.obstacle_sprites)
 
-    def run(self, dt):
+    def run(self):
         self.visible_sprites.draw(self.display_surface)
-        self.visible_sprites.update(dt)
+        self.visible_sprites.update()
     

@@ -1,7 +1,9 @@
-import pygame, time
+import pygame
 from sys import exit
 from settings import *
 from levels import Level
+
+fps = 60
 
 class Game:
     def __init__(self):
@@ -10,7 +12,6 @@ class Game:
         pygame.font.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         self.clock = pygame.time.Clock()
-        self.last_time = time.time()
         self.level = Level(0)
 
     # Probably move this out to settings.py
@@ -27,25 +28,27 @@ class Game:
     #     self.level = Level(index)
 
     def run(self):
-        previous_time = time.time()
-        
         while True:
-            dt = time.time() - previous_time
-            previous_time = time.time()
-            
+            global fps
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
                     exit()
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_e:
+                        fps = 10
+                    elif event.key == pygame.K_r:
+                        fps = 60
 
             self.screen.fill('black')
 
             self.display_text(str(int(self.clock.get_fps())), 10, 10, 'White')
-
-            self.level.run(dt)
+            
+            self.level.run()
 
             pygame.display.update()
-            self.clock.tick(FPS)
+
+            self.clock.tick(fps)
 
 if __name__ == '__main__':
     game = Game()

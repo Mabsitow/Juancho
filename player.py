@@ -1,17 +1,20 @@
+from pickletools import pybytes
 import pygame
 from settings import *
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, position, groups, transferable_sprites, obstacle_sprites):
         super().__init__(groups)
-        self.surface_list = []
         self.image = pygame.image.load('assets/textures/player/right/0.png').convert_alpha()
         self.rect = self.image.get_rect(topleft = position)
         self.old_rect = self.rect.copy()
+        self.width = self.image.get_width()
+        self.height = self.image.get_height()
         self.jump_available = True
         self.pos = pygame.math.Vector2(self.rect.topleft)
         self.direction = pygame.math.Vector2()
-        self.speed = 300
+        self.vel_x = 600
+        self.vel_y = 40
         self.gravity = 0
         self.transferable_sprites = transferable_sprites
         self.obstacle_sprites = obstacle_sprites
@@ -23,7 +26,7 @@ class Player(pygame.sprite.Sprite):
         self.idle_limit = 60000
         self.status = 'static_right'
         self.last_pressed = ''
-        self.collided = False
+        self.collided_top = False
         self.frame_index = 0
         self.animation_speed = 0.15
         self.import_player_assets()
@@ -45,7 +48,7 @@ class Player(pygame.sprite.Sprite):
     def get_status(self):
         if self.last_pressed == 'right':
             if self.jump_available == False:
-                if self.collided == True:
+                if self.collided_top == True:
                     self.status = 'jump_hit_right'
                 else:    
                     self.status = 'jump_right'
@@ -57,7 +60,7 @@ class Player(pygame.sprite.Sprite):
 
         elif self.last_pressed == 'left':
             if self.jump_available == False:
-                if self.collided == True:
+                if self.collided_top == True:
                     self.status = 'jump_hit_left'
                 else:
                     self.status = 'jump_left'
@@ -78,7 +81,7 @@ class Player(pygame.sprite.Sprite):
 
         if key[pygame.K_UP] and self.jump_available == True:
             self.jump_available = False
-            self.gravity = -96
+            self.gravity = -40
             self.idling = False
             self.idle_time = 0
 
@@ -115,19 +118,32 @@ class Player(pygame.sprite.Sprite):
         if self.idle_time > self.idle_limit:
             self.idling = True
 
-    def move(self, speed, dt):
+    def move(self):
         if self.direction.magnitude_squared() != 0:
             self.direction = self.direction.normalize()
 
-        self.gravity += speed * dt
-        self.direction.y += self.gravity * dt
-        
-        self.pos.x += self.direction.x * speed * dt
-        self.rect.x = round(self.pos.x)
+        self.pos.x += round(self.direction.x * self.vel_x * 0.1)
+
+        if self.pos.x >= (SCREEN_WIDTH - self.width):
+            self.pos.x = SCREEN_WIDTH - self.width
+        elif self.pos.x <= 0:
+            self.pos.x = 0
+
+        self.rect.x = self.pos.x
         self.collision('horizontal')
 
-        self.pos.y += self.direction.y * speed * dt
-        self.rect.y = round(self.pos.y)
+        self.gravity += 0.1 * self.vel_y
+        self.direction.y += self.gravity
+        self.pos.y += round(self.direction.y)
+
+        print(self.gravity)
+
+        if self.pos.y >= (SCREEN_HEIGHT - self.height):
+            self.pos.y = SCREEN_HEIGHT - self.height * 2
+        elif self.pos.y <= 0:
+            self.pos.y = 0
+
+        self.rect.y = self.pos.y
         self.collision('vertical')
 
     def collision(self, direction):
@@ -155,13 +171,13 @@ class Player(pygame.sprite.Sprite):
                         self.pos.y = self.rect.y
                         self.gravity = 0
                         self.jump_available = True
-                        self.collided = False
+                        self.collided_top = False
 
                     # Collision on the top
                     if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
                         self.rect.top = sprite.rect.bottom
                         self.pos.y = self.rect.y
-                        self.collided = True
+                        self.collided_top = True
 
         if transferable_sprites:
             if direction == 'vertical':
@@ -172,14 +188,14 @@ class Player(pygame.sprite.Sprite):
                         self.pos.y = self.rect.y
                         self.gravity = 0
                         self.jump_available = True
-                        self.collided = False
+                        self.collided_top = False
 
                     # Collision on the top
                     if self.rect.top <= sprite.rect.bottom and self.old_rect.top >= sprite.old_rect.bottom:
                         if self.direction.y > sprite.rect.top:
                             self.rect.bottom = sprite.rect.top
                             self.pos.y = self.rect.y
-                            self.collided = False
+                            self.collided_top = False
             # Left this here if I need it in the near future, for now I don't
             # if direction == 'horizontal':
             #     for sprite in transferable_sprites:
@@ -206,10 +222,10 @@ class Player(pygame.sprite.Sprite):
         self.image = animation[int(self.frame_index)]
         self.rect = self.image.get_rect(topleft = self.rect.topleft)
 
-    def update(self, dt):
+    def update(self):
         self.old_rect = self.rect.copy()
         self.input()
         self.cooldowns()
         self.get_status()
         self.animate()
-        self.move(self.speed, dt)
+        self.move()
